@@ -242,7 +242,6 @@ def fetch_market_references(query):
 MODEL_OPTIONS = {
     "⚡ FLUX.1 Schnell": {"id": "black-forest-labs/FLUX.1-schnell", "provider": "huggingface"},
     "🔥 FLUX.1 Dev": {"id": "black-forest-labs/FLUX.1-dev", "provider": "huggingface"},
-    }
 }
 selected_model = st.sidebar.selectbox("Choose AI Model", list(MODEL_OPTIONS.keys()))
 
