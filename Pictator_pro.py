@@ -25,7 +25,7 @@ TRUSTED_DOMAINS = [
     "amazon.in", "sa.made-in-china.com", "pinterest.com/search/pins/?q=seat%20covers", "pinterest.com", "carwale.com"
 ]
 
-st.title("🛞 Pictator Pro – CEO Brake Design Engineering Suite")
+st.title("🛞 Pictator Pro – CNC Brake Design Engineering Suite")
 st.caption("Strategic Parallel RCA | Disc Brake & Drum Brake Design | AI Concept + Market Intelligence")
 
 # --------------------------------------
