@@ -245,91 +245,189 @@ MODEL_OPTIONS = {
 }
 selected_model = st.sidebar.selectbox("Choose AI Model", list(MODEL_OPTIONS.keys()))
 
-with st.expander("🧠 Smart Brake Design Configurator", expanded=True):
-    a, b, c = st.columns(3)
-    with a:
-        vehicle = st.selectbox("Vehicle", ["Maruti Wagon R", "Maruti Grand Vitara", "Custom Vehicle"])
-        brake_type = st.selectbox("Brake Type", [
-            "Disc Brake", "Drum Brake", "Front Disc + Rear Drum",
-            "Front & Rear Disc", "Custom / Prompt Based"
-        ])
-        axle = st.selectbox("Axle", ["Front", "Rear", "Front & Rear", "Custom"])
-    with b:
-        rotor = st.selectbox("Rotor / Drum Design", [
-            "Solid Rotor", "Vented Rotor", "Cross-Drilled Rotor",
-            "Slotted Rotor", "Drilled + Slotted Rotor",
-            "OEM Drum", "Performance Drum", "Custom / Prompt Based"
-        ])
-        caliper = st.selectbox("Caliper / Hardware", [
-            "OEM Single-Piston", "Floating Caliper", "Fixed Multi-Piston",
-            "Performance 4-Piston", "Performance 6-Piston",
-            "Drum Shoe Assembly", "Custom / Prompt Based"
-        ])
-        material = st.selectbox("Material", [
-            "Cast Iron", "High-Carbon Cast Iron", "Forged Aluminium",
-            "Steel", "Aluminium + Steel", "Composite / Custom"
-        ])
-    with c:
-        finish = st.selectbox("Finish", [
-            "OEM Satin", "Brushed Metal", "Machined", "Gloss",
-            "Matte", "Anodized", "Powder Coated", "Custom"
-        ])
-        lighting = st.selectbox("Photography / Visualization", [
-            "Studio Product Photography", "Blueprint / CAD Presentation",
-            "Cinematic Showroom", "Wheel-On Vehicle Photography",
-            "Exploded Engineering View", "Custom"
-        ])
+# ==========================================
+# 🧩 PART SELECTION
+# Brake controls remain unchanged; non-brake
+# components use dedicated prompt-based controls.
+# ==========================================
+PART_OPTIONS = [
+    "Brake Components",
+    "Cylinder Block",
+    "Cylinder Head",
+    "Crank Case",
+    "Other Automotive Component",
+    "Custom Component",
+]
+selected_part_category = st.sidebar.selectbox(
+    "🧩 Part Selection",
+    PART_OPTIONS,
+    index=0,
+)
 
-    design_prompt = st.text_area(
-        "✍️ Design Prompt / Idea",
-        placeholder="Describe the brake design you want: rotor geometry, caliper style, color, finish, wheel visibility, cooling concept, branding, etc.",
-        height=130
-    )
-    custom_instruction = st.text_area(
-        "Additional Engineering Instructions",
-        placeholder="Add dimensions, ventilation direction, slot pattern, mounting concept, thermal features, wheel clearance, or visual requirements.",
-        height=100
+if selected_part_category == "Brake Components":
+    selected_part_focus = "Brake"
+else:
+    selected_part_focus = st.sidebar.text_input(
+        "Component / Part Name",
+        value="" if selected_part_category != "Other Automotive Component" else "",
+        placeholder="e.g. gearbox housing, transmission case, suspension housing",
     )
 
+if selected_part_category == "Brake Components":
+
+        a, b, c = st.columns(3)
+        with a:
+            vehicle = st.selectbox("Vehicle", ["Maruti Wagon R", "Maruti Grand Vitara", "Custom Vehicle"])
+            brake_type = st.selectbox("Brake Type", [
+                "Disc Brake", "Drum Brake", "Front Disc + Rear Drum",
+                "Front & Rear Disc", "Custom / Prompt Based"
+            ])
+            axle = st.selectbox("Axle", ["Front", "Rear", "Front & Rear", "Custom"])
+        with b:
+            rotor = st.selectbox("Rotor / Drum Design", [
+                "Solid Rotor", "Vented Rotor", "Cross-Drilled Rotor",
+                "Slotted Rotor", "Drilled + Slotted Rotor",
+                "OEM Drum", "Performance Drum", "Custom / Prompt Based"
+            ])
+            caliper = st.selectbox("Caliper / Hardware", [
+                "OEM Single-Piston", "Floating Caliper", "Fixed Multi-Piston",
+                "Performance 4-Piston", "Performance 6-Piston",
+                "Drum Shoe Assembly", "Custom / Prompt Based"
+            ])
+            material = st.selectbox("Material", [
+                "Cast Iron", "High-Carbon Cast Iron", "Forged Aluminium",
+                "Steel", "Aluminium + Steel", "Composite / Custom"
+            ])
+        with c:
+            finish = st.selectbox("Finish", [
+                "OEM Satin", "Brushed Metal", "Machined", "Gloss",
+                "Matte", "Anodized", "Powder Coated", "Custom"
+            ])
+            lighting = st.selectbox("Photography / Visualization", [
+                "Studio Product Photography", "Blueprint / CAD Presentation",
+                "Cinematic Showroom", "Wheel-On Vehicle Photography",
+                "Exploded Engineering View", "Custom"
+            ])
+
+        design_prompt = st.text_area(
+            "✍️ Design Prompt / Idea",
+            placeholder="Describe the brake design you want: rotor geometry, caliper style, color, finish, wheel visibility, cooling concept, branding, etc.",
+            height=130
+        )
+        custom_instruction = st.text_area(
+            "Additional Engineering Instructions",
+            placeholder="Add dimensions, ventilation direction, slot pattern, mounting concept, thermal features, wheel clearance, or visual requirements.",
+            height=100
+        )
+
 # ==========================================
-# 🛠️ BRAKE DETAIL / DESIGN PATCHES
+# 🛠️ PART-SPECIFIC DESIGN CONTROLS
 # ==========================================
-st.markdown("### 🛠️ Brake Design Enhancements")
-p1, p2 = st.columns(2)
-with p1:
-    component_focus = st.selectbox("Design Focus", [
-        "Full Brake Assembly",
-        "Brake Disc / Rotor Only",
-        "Brake Drum Only",
-        "Steering Knuckle Only",
-        "Brake Plate / Pressure Plate Only",
-        "Rotor + Caliper",
-        "Drum + Backing Plate",
-        "Custom-Prompt Based"
-    ])
-    details = st.multiselect("Component Details", [
-        "Ventilation Channels",
-        "Cross-Drilled Holes",
-        "Directional Slots",
-        "Curved Vanes",
-        "Floating Two-Piece Rotor",
-        "Machined Hat",
-        "Cooling Fins",
-        "Brake Shoe Detail",
-        "Backing Plate Detail",
-        "Pressure Plate Detail",
-        "Casting / Machining Detail",
-        "Custom-Prompt Based"
-    ], default=["Ventilation Channels"])
-with p2:
-    features = st.multiselect("Engineering / Visual Features", [
-        "Lightweight Design", "High Thermal Capacity", "Performance Appearance",
-        "OEM+ Appearance", "Low-Dust Visual Concept",
-        "Corrosion-Resistant Finish", "Wheel Clearance Focus",
-        "Premium Machined Details", "Custom-Prompt Based"
-    ], default=["OEM+ Appearance"])
+if selected_part_category == "Brake Components":
+    st.markdown("### 🛠️ Brake Design Enhancements")
+    p1, p2 = st.columns(2)
+    with p1:
+        component_focus = st.selectbox("Design Focus", [
+            "Full Brake Assembly",
+            "Brake Disc / Rotor Only",
+            "Brake Drum Only",
+            "Steering Knuckle Only",
+            "Brake Plate / Pressure Plate Only",
+            "Rotor + Caliper",
+            "Drum + Backing Plate",
+            "Custom-Prompt Based"
+        ])
+        details = st.multiselect("Component Details", [
+            "Ventilation Channels",
+            "Cross-Drilled Holes",
+            "Directional Slots",
+            "Curved Vanes",
+            "Floating Two-Piece Rotor",
+            "Machined Hat",
+            "Cooling Fins",
+            "Brake Shoe Detail",
+            "Backing Plate Detail",
+            "Pressure Plate Detail",
+            "Casting / Machining Detail",
+            "Custom-Prompt Based"
+        ], default=["Ventilation Channels"])
+    with p2:
+        features = st.multiselect("Engineering / Visual Features", [
+            "Lightweight Design", "High Thermal Capacity", "Performance Appearance",
+            "OEM+ Appearance", "Low-Dust Visual Concept",
+            "Corrosion-Resistant Finish", "Wheel Clearance Focus",
+            "Premium Machined Details", "Custom-Prompt Based"
+        ], default=["OEM+ Appearance"])
+
+else:
+    # Non-brake parts deliberately do NOT show brake-specific controls.
+    # The selected component is controlled entirely by these prompts.
+    st.markdown(f"### 🧩 {selected_part_category} Design")
+    np1, np2 = st.columns(2)
+    with np1:
+        non_brake_prompt = st.text_area(
+            "✍️ Component Design Prompt / Idea",
+            placeholder=(
+                "Describe exactly what should be designed: geometry, casting features, "
+                "mounting points, ribs, bosses, cavities, interfaces, dimensions, "
+                "manufacturing intent, or application."
+            ),
+            height=150,
+        )
+        non_brake_engineering = st.text_area(
+            "⚙️ Engineering / Manufacturing Instructions",
+            placeholder=(
+                "Add material, wall thickness concept, draft angles, machining zones, "
+                "thermal requirements, mounting interfaces, tolerances, or other requirements."
+            ),
+            height=120,
+        )
+    with np2:
+        non_brake_material = st.selectbox(
+            "Material",
+            [
+                "Cast Iron",
+                "Aluminium Alloy",
+                "Steel",
+                "Ductile Iron",
+                "High-Strength Aluminium",
+                "Custom / Prompt Based",
+            ],
+        )
+        non_brake_finish = st.selectbox(
+            "Surface / Presentation",
+            [
+                "As-Cast",
+                "Machined",
+                "Shot-Blasted",
+                "Brushed Metal",
+                "OEM Industrial",
+                "Technical CAD",
+                "Custom / Prompt Based",
+            ],
+        )
+        non_brake_visualization = st.selectbox(
+            "Visualization",
+            [
+                "Studio Product Photography",
+                "Blueprint / CAD Presentation",
+                "Exploded Engineering View",
+                "Industrial Manufacturing View",
+                "Cinematic Product Visualization",
+                "Custom",
+            ],
+        )
+    non_brake_scope = st.text_area(
+        "🎯 Strict Product Scope",
+        placeholder=(
+            "State what must appear in the image and what must not appear. "
+            "Example: show only the cylinder block casting; no brake parts, wheels, "
+            "seat covers, upholstery, or unrelated accessories."
+        ),
+        height=90,
+    )
+
 st.divider()
-
 
 # ==========================================
 # 🖼️ GENERATION SETTINGS
@@ -341,16 +439,17 @@ num_images = st.select_slider("Number of Concept Variations to Generate", option
 # 🎯 STRICT IMAGE SUBJECT CONTROL
 # --------------------------------------
 st.info(
-    "Image generation follows the selected Design Focus. "
-    "Unrelated products or accessories are excluded unless explicitly requested "
-    "in the design prompt."
+    "Image generation follows the selected Part Selection. "
+    "Brake components retain the existing brake controls; non-brake components "
+    "use dedicated prompt-based controls and are not converted into brake designs."
 )
 
 # --------------------------------------
 # 🚀 EXECUTION PIPELINE
 # --------------------------------------
-if st.button("🚀 EXECUTE BRAKE DESIGN SUITE"):
-    brake_prompt = f"""
+if st.button("🚀 EXECUTE DESIGN SUITE"):
+    if selected_part_category == "Brake Components":
+        brake_prompt = f"""
 Create a professional automotive engineering design concept for {vehicle}.
 
 PRIMARY COMPONENT — STRICT:
@@ -370,42 +469,102 @@ Additional engineering instructions: {custom_instruction or "Maintain physically
 Visualization: {lighting}.
 
 PRODUCT SCOPE:
+The selected brake component is the hero subject. Do not introduce seat covers,
+upholstery, interior trim, piping, threading, stitching, steering-wheel covers,
+or unrelated vehicle accessories.
+
 If the selected focus is Brake Disc / Rotor Only, show the brake disc/rotor as the
-hero product and do not introduce seat covers, upholstery, interior trim, piping,
-threading, stitching, steering-wheel covers, or unrelated vehicle accessories.
+hero product. If Brake Drum Only, show the brake drum as the hero product.
+If Steering Knuckle Only, show the steering knuckle as the hero product.
+If Brake Plate / Pressure Plate Only, show that plate component as the hero product.
 
-If the selected focus is Brake Drum Only, show the brake drum as the hero product.
-If the selected focus is Steering Knuckle Only, show the steering knuckle as the hero
-product. If the selected focus is Brake Plate / Pressure Plate Only, show that plate
-component as the hero product.
-
-If the user prompt explicitly requests a specific component, follow that component
-and do not substitute a different product. Do not add unrelated automotive products.
-
-SUPPORTED PRODUCT CATEGORIES:
-Automotive braking components include:
+SUPPORTED BRAKE PRODUCTS:
 - Brake Discs: high-performance ventilated and solid brake rotors.
 - Brake Drums: heavy-duty rear brake components.
 - Steering Knuckles: precision-engineered suspension parts.
 - Brake Plates & Pressure Plates: thermal-stable cast-iron plate components.
 
-Non-automotive casting categories may be referenced only when explicitly requested:
-- Cylinder Blocks: cast-condition engine blocks.
-- Cylinder Heads: precision-cast components for machinery and engines.
-- Crank Cases: castings primarily applied in compressors for the consumer durable sector.
-
 VISUAL QUALITY:
 Show realistic automotive manufacturing details, credible geometry, mounting
 relationships, wheel clearance where relevant, ventilation/cooling features where
 applicable, machined/cast surfaces, and professional product visualization.
-For disc brakes, show credible rotor, hub/hat and caliper relationships only when
-they are necessary to explain the selected design. For drum brakes, show credible
-drum, backing plate, shoes and hardware only when relevant to the selected focus.
-
 This is a concept visualization and not a certified safety-critical engineering drawing.
 """
+        market_query = f"{vehicle} {brake_type} {rotor} {caliper}"
+        analysis_prompt = (
+            f"Briefly analyze high-level 2026 trends for {brake_type}, {rotor}, "
+            f"{caliper}, {material}, cooling, thermal management, manufacturing "
+            f"and OEM+ automotive design."
+        )
+        caption_prefix = "Brake Design Concept"
 
-    st.write(f"🎨 Generating {num_images} AI Brake Design Concept(s)...")
+    else:
+        selected_component = selected_part_focus.strip() or selected_part_category
+        non_brake_prompt = locals().get("non_brake_prompt", "")
+        non_brake_engineering = locals().get("non_brake_engineering", "")
+        non_brake_material = locals().get("non_brake_material", "Custom / Prompt Based")
+        non_brake_finish = locals().get("non_brake_finish", "Custom / Prompt Based")
+        non_brake_visualization = locals().get("non_brake_visualization", "Technical CAD")
+        non_brake_scope = locals().get("non_brake_scope", "")
+
+        brake_prompt = f"""
+Create a professional industrial/automotive engineering design concept.
+
+PRIMARY COMPONENT — ABSOLUTE:
+The image must primarily and clearly show ONLY:
+{selected_component}.
+
+PART CATEGORY:
+{selected_part_category}.
+
+USER DESIGN PROMPT:
+{non_brake_prompt or "Develop a realistic, manufacturable professional concept for the selected component."}
+
+ENGINEERING / MANUFACTURING INSTRUCTIONS:
+{non_brake_engineering or "Maintain physically plausible geometry and manufacturing logic."}
+
+MATERIAL:
+{non_brake_material}.
+
+SURFACE / PRESENTATION:
+{non_brake_finish}.
+
+VISUALIZATION:
+{non_brake_visualization}.
+
+STRICT PRODUCT SCOPE:
+{non_brake_scope or "Show only the selected component and only the interfaces/details required to explain it."}
+
+IMPORTANT:
+Do NOT convert this request into a brake design.
+Do NOT add brake discs, brake drums, calipers, brake shoes, backing plates,
+rotors, wheels, seat covers, upholstery, piping, threading, stitching,
+steering-wheel covers, or unrelated accessories unless the user explicitly
+requests one of them in the prompt.
+
+SUPPORTED NON-BRAKE PRODUCT EXAMPLES:
+- Cylinder Blocks: cast-condition engine blocks.
+- Cylinder Heads: precision-cast components for machinery and engines.
+- Crank Cases: castings primarily applied in compressors for the consumer durable sector.
+
+If another automotive component is explicitly named by the user, generate that
+component instead of substituting a brake component.
+
+VISUAL QUALITY:
+Use credible cast or machined surfaces, ribs, bosses, cavities, mounting points,
+interfaces, draft/machining logic, realistic proportions, and professional
+industrial product visualization. Avoid invented branding and impossible geometry.
+This is a concept visualization and not a certified engineering drawing.
+"""
+        market_query = f"{selected_component} {selected_part_category} automotive component manufacturing"
+        analysis_prompt = (
+            f"Briefly analyze high-level 2026 design and manufacturing trends for "
+            f"{selected_component}, focusing on material, casting/machining, thermal "
+            f"management, manufacturability and OEM/industrial design."
+        )
+        caption_prefix = f"{selected_component} Design Concept"
+
+    st.write(f"🎨 Generating {num_images} AI Design Concept(s)...")
     progress = st.progress(0)
     generated_images = []
 
@@ -418,21 +577,19 @@ This is a concept visualization and not a certified safety-critical engineering 
 
         if img:
             generated_images.append(img)
-            st.image(img, caption=f"Brake Design Concept {i + 1}", use_container_width=True)
+            st.image(
+                img,
+                caption=f"{caption_prefix} {i + 1}",
+                use_container_width=True
+            )
 
         progress.progress((i + 1) / num_images)
 
     st.write("🌐 Fetching Real-World Market References...")
-    market_refs = fetch_market_references(
-        f"{vehicle} {brake_type} {rotor} {caliper}"
-    )
+    market_refs = fetch_market_references(market_query)
 
-    st.write("📊 Analyzing Brake Design Trends...")
-    analysis = call_openrouter(
-        f"Briefly analyze high-level 2026 trends for {brake_type}, "
-        f"{rotor}, {caliper}, {material}, cooling, thermal management, "
-        f"manufacturing and OEM+ automotive design."
-    )
+    st.write("📊 Analyzing Design & Market Trends...")
+    analysis = call_openrouter(analysis_prompt)
 
     if market_refs:
         st.markdown("### 🌐 Market References")
@@ -444,6 +601,12 @@ This is a concept visualization and not a certified safety-critical engineering 
         st.write(analysis)
 
     if generated_images:
-        st.success(f"Generated {len(generated_images)} brake design concept(s).")
+        st.success(
+            f"Generated {len(generated_images)} "
+            f"{caption_prefix.lower()}(s)."
+        )
     else:
-        st.warning("No AI design image was generated. Check the selected AI model and credentials.")
+        st.warning(
+            "No AI design image was generated. "
+            "Check the selected AI model and credentials."
+        )
