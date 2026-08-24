@@ -298,14 +298,28 @@ st.markdown("### 🛠️ Brake Design Enhancements")
 p1, p2 = st.columns(2)
 with p1:
     component_focus = st.selectbox("Design Focus", [
-        "Full Brake Assembly", "Disc Rotor Only", "Caliper Only",
-        "Drum Assembly Only", "Rotor + Caliper",
-        "Rotor + Wheel Clearance", "Exploded Component View", "Custom-Prompt Based"
+        "Full Brake Assembly",
+        "Brake Disc / Rotor Only",
+        "Brake Drum Only",
+        "Steering Knuckle Only",
+        "Brake Plate / Pressure Plate Only",
+        "Rotor + Caliper",
+        "Drum + Backing Plate",
+        "Custom-Prompt Based"
     ])
-    details = st.multiselect("Rotor / Drum Details", [
-        "Ventilation Channels", "Cross-Drilled Holes", "Directional Slots",
-        "Curved Vanes", "Floating Two-Piece Rotor", "Machined Hat",
-        "Cooling Fins", "Brake Shoe Detail", "Custom-Prompt Based"
+    details = st.multiselect("Component Details", [
+        "Ventilation Channels",
+        "Cross-Drilled Holes",
+        "Directional Slots",
+        "Curved Vanes",
+        "Floating Two-Piece Rotor",
+        "Machined Hat",
+        "Cooling Fins",
+        "Brake Shoe Detail",
+        "Backing Plate Detail",
+        "Pressure Plate Detail",
+        "Casting / Machining Detail",
+        "Custom-Prompt Based"
     ], default=["Ventilation Channels"])
 with p2:
     features = st.multiselect("Engineering / Visual Features", [
@@ -324,30 +338,71 @@ st.markdown("### 🖼️ Concept Generation Matrix")
 num_images = st.select_slider("Number of Concept Variations to Generate", options=[1, 3, 5], value=1)
 
 # --------------------------------------
+# 🎯 STRICT IMAGE SUBJECT CONTROL
+# --------------------------------------
+st.info(
+    "Image generation follows the selected Design Focus. "
+    "Unrelated products or accessories are excluded unless explicitly requested "
+    "in the design prompt."
+)
+
+# --------------------------------------
 # 🚀 EXECUTION PIPELINE
 # --------------------------------------
 if st.button("🚀 EXECUTE BRAKE DESIGN SUITE"):
     brake_prompt = f"""
 Create a professional automotive engineering design concept for {vehicle}.
+
+PRIMARY COMPONENT — STRICT:
+The image must primarily and clearly show ONLY the selected Design Focus:
+{component_focus}.
+
 Brake architecture: {brake_type}.
 Axle: {axle}.
-Rotor / drum: {rotor}.
-Caliper / hardware: {caliper}.
+Rotor / drum specification: {rotor}.
+Caliper / hardware specification: {caliper}.
 Material: {material}.
 Finish: {finish}.
-Design focus: {component_focus}.
-Rotor / drum details: {", ".join(details) if details else "standard"}.
+Component details: {", ".join(details) if details else "standard"}.
 Engineering / visual features: {", ".join(features) if features else "standard"}.
 User design idea: {design_prompt or "Develop a premium OEM+ concept."}
 Additional engineering instructions: {custom_instruction or "Maintain physically plausible automotive packaging."}
 Visualization: {lighting}.
 
-Show realistic automotive manufacturing details, credible mounting relationships,
-wheel clearance, ventilation/cooling features where applicable, machined surfaces,
-and professional product visualization. For drum brakes, show a credible drum,
-backing plate, shoes and hardware. For disc brakes, show credible rotor, hub/hat
-and caliper relationships. This is a concept visualization and not a certified
-safety-critical engineering drawing.
+PRODUCT SCOPE:
+If the selected focus is Brake Disc / Rotor Only, show the brake disc/rotor as the
+hero product and do not introduce seat covers, upholstery, interior trim, piping,
+threading, stitching, steering-wheel covers, or unrelated vehicle accessories.
+
+If the selected focus is Brake Drum Only, show the brake drum as the hero product.
+If the selected focus is Steering Knuckle Only, show the steering knuckle as the hero
+product. If the selected focus is Brake Plate / Pressure Plate Only, show that plate
+component as the hero product.
+
+If the user prompt explicitly requests a specific component, follow that component
+and do not substitute a different product. Do not add unrelated automotive products.
+
+SUPPORTED PRODUCT CATEGORIES:
+Automotive braking components include:
+- Brake Discs: high-performance ventilated and solid brake rotors.
+- Brake Drums: heavy-duty rear brake components.
+- Steering Knuckles: precision-engineered suspension parts.
+- Brake Plates & Pressure Plates: thermal-stable cast-iron plate components.
+
+Non-automotive casting categories may be referenced only when explicitly requested:
+- Cylinder Blocks: cast-condition engine blocks.
+- Cylinder Heads: precision-cast components for machinery and engines.
+- Crank Cases: castings primarily applied in compressors for the consumer durable sector.
+
+VISUAL QUALITY:
+Show realistic automotive manufacturing details, credible geometry, mounting
+relationships, wheel clearance where relevant, ventilation/cooling features where
+applicable, machined/cast surfaces, and professional product visualization.
+For disc brakes, show credible rotor, hub/hat and caliper relationships only when
+they are necessary to explain the selected design. For drum brakes, show credible
+drum, backing plate, shoes and hardware only when relevant to the selected focus.
+
+This is a concept visualization and not a certified safety-critical engineering drawing.
 """
 
     st.write(f"🎨 Generating {num_images} AI Brake Design Concept(s)...")
@@ -392,4 +447,3 @@ safety-critical engineering drawing.
         st.success(f"Generated {len(generated_images)} brake design concept(s).")
     else:
         st.warning("No AI design image was generated. Check the selected AI model and credentials.")
-
