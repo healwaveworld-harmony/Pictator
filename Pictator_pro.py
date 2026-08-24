@@ -278,10 +278,6 @@ with st.expander("🧠 Smart Brake Design Configurator", expanded=True):
             "OEM Satin", "Brushed Metal", "Machined", "Gloss",
             "Matte", "Anodized", "Powder Coated", "Custom"
         ])
-        color = st.selectbox("Caliper / Hardware Color", [
-            "Silver", "White", "Beige", "Cream", "Sky Blue",
-            "Magenta", "Black", "Gunmetal", "Red", "Custom"
-        ])
         lighting = st.selectbox("Photography / Visualization", [
             "Studio Product Photography", "Blueprint / CAD Presentation",
             "Cinematic Showroom", "Wheel-On Vehicle Photography",
@@ -324,39 +320,6 @@ with p2:
     ], default=["OEM+ Appearance"])
 st.divider()
 
-# ==========================================
-# 🧵 PIPING & STITCHING DETAILS
-# ==========================================
-st.markdown("### 🧵 Accent Details (Piping & Stitching)")
-accent_cols = st.columns(2)
-
-with accent_cols[0]:
-    enable_piping = st.toggle("Enable Dynamic Custom Piping", value=True)
-    if enable_piping:
-        piping_colors = st.multiselect(
-            "Select Piping Colors (Cycles through selections per generated image)",
-            ["Tarocco Orange", "Austin Gold", "Desert Sand/Peach", "Metallic Silver", "Sky Blue", "Gloss Black", "Chalk/Off-White", "Alabaster Cream", "Matching Contrast", "Magenta", "Custom"],
-            # Fixed: The defaults now match the available options in the list above.
-            default=["Tarocco Orange", "Austin Gold", "Desert Sand/Peach"],
-            key="piping_colors_select"
-        )
-    else:
-        piping_colors = []
-
-with accent_cols[1]:
-    enable_stitching = st.toggle("Enable Dynamic Custom Stitching", value=True)
-    if enable_stitching:
-        stitching_colors = st.multiselect(
-            "Select Stitching Colors (Cycles through selections per generated image)",
-            ["Burnt Orange", "Austin Gold/Kyalami Gold", "Metallic Silver", "Salmon Peach/Desert Sand", "Electric Blue", "Obsidian Black/Piano Gloss Black", "Yas Marina-Blue/Miami-Blue", "True White", "Racing Yellow", "Macadamia/Alabaster Cream", "Rubystone Magenta/Viola Parsifae"],
-            # Fixed: The defaults now match the available options in the list above.
-            default=["Burnt Orange", "Austin Gold/Kyalami Gold", "Metallic Silver"],
-            key="stitching_colors_select"
-        )
-    else:
-        stitching_colors = []
-
-st.divider()
 
 # ==========================================
 # 🖼️ GENERATION SETTINGS
@@ -368,159 +331,69 @@ num_images = st.select_slider("Number of Concept Variations to Generate", option
 # 🚀 EXECUTION PIPELINE
 # --------------------------------------
 if st.button("🚀 EXECUTE BRAKE DESIGN SUITE"):
-    # Build the design prompt from the same AI/image pipeline.
     brake_prompt = f"""
-Professional automotive brake design concept for {vehicle}.
-Brake architecture: {brake_type}. Axle: {axle}.
-Rotor/drum: {rotor}. Caliper/hardware: {caliper}.
-Material: {material}. Finish: {finish}. Color: {color}.
+Create a professional automotive engineering design concept for {vehicle}.
+Brake architecture: {brake_type}.
+Axle: {axle}.
+Rotor / drum: {rotor}.
+Caliper / hardware: {caliper}.
+Material: {material}.
+Finish: {finish}.
 Design focus: {component_focus}.
-Details: {", ".join(details) if details else "standard"}.
-Features: {", ".join(features) if features else "standard"}.
-User design idea: {design_prompt}
-Additional instructions: {custom_instruction}.
+Rotor / drum details: {", ".join(details) if details else "standard"}.
+Engineering / visual features: {", ".join(features) if features else "standard"}.
+User design idea: {design_prompt or "Develop a premium OEM+ concept."}
+Additional engineering instructions: {custom_instruction or "Maintain physically plausible automotive packaging."}
 Visualization: {lighting}.
 
-Keep geometry physically plausible and visually coherent.
-For disc brakes, show credible rotor, hub/hat and caliper relationships.
-For drum brakes, show credible drum, backing plate, shoes and hardware.
-Show realistic metal, machining, cooling and mounting details.
-This is a visual concept, not a certified safety-critical engineering drawing.
+Show realistic automotive manufacturing details, credible mounting relationships,
+wheel clearance, ventilation/cooling features where applicable, machined surfaces,
+and professional product visualization. For drum brakes, show a credible drum,
+backing plate, shoes and hardware. For disc brakes, show credible rotor, hub/hat
+and caliper relationships. This is a concept visualization and not a certified
+safety-critical engineering drawing.
 """
-    # Keep the original pipeline below, but use the brake prompt as the design basis.
 
-    generated_concepts = []
-    
-    with st.status("Engineering Intelligence...") as status:
-        st.write(f"🎨 Generating {num_images} AI Design Concept(s)...")
-        
-        for i in range(num_images):
-            # 1. Determine Piping & Stitching Selection with Hyper-Isolated Prompt Guardrails
-            current_piping = "Standard"
-            current_stitching = "Standard"
-            piping_phrase = ""
-            stitching_phrase = ""
-            
-            if enable_piping and piping_colors:
-                current_piping = piping_colors[i % len(piping_colors)]
-                # Prevents color bleeding by strictly assigning the color ONLY to perimeter borders
-                piping_phrase = f" The solid outer border edge piping must be colored strictly and exclusively in {current_piping}."
-                
-            if enable_stitching and stitching_colors:
-                current_stitching = stitching_colors[i % len(stitching_colors)]
-                # Forces the model to separate thread lines from edge leather piping
-                stitching_phrase = f" Distinct from the piping, all interior seam stitching must be sewn explicitly with {current_stitching} colored thread."
-                
-            accent_phrase = f"{piping_phrase}{stitching_phrase}"
-            
-            # 1b. Determine Quilt Design for this iteration
-            current_quilt = "Standard"
-            quilt_phrase = ""
-            if quilt_designs:
-                current_quilt = quilt_designs[i % len(quilt_designs)]
-                quilt_phrase = f" featuring premium {current_quilt} quilt elements on the center inserts,"
-            
-            # 2. Determine Strict Spatial Patch Logic
-            patch_phrase = ""
-            if patch_loc == "Shoulder Support":
-                patch_phrase = f" broad {patch_color} structural side patches positioned exclusively on the upper shoulder bolsters (left and right edges only, keeping center clear),"
-            elif patch_loc == "Seat Back Bolsters":
-                patch_phrase = f" broad {patch_color} structural side strips positioned exclusively on the left and right vertical side bolsters of the seat back (keeping center clear),"
-            elif patch_loc == "Seat Base/Seat Pan":
-                patch_phrase = f" broad {patch_color} structural side strips positioned exclusively on the left and right horizontal base side bolsters of the seat base (keeping center clear),"
-            elif patch_loc == "Bolsters":
-                patch_phrase = f" broad {patch_color} padded side sections on the backrest and horizontal base center bolsters (keeping center inserts clear),"
-            elif patch_loc == "Back side Bolsters+base side Bolsters":
-                patch_phrase = f" broad {patch_color} structural side patches running exclusively along the full outer side bolsters of both the seat back and the seat base (left and right edges only, keeping center clear),"
-            
-            # 3. FINAL RE-ENGINEERED PROMPT: Notice structural separation
-            iteration_prompt = brake_prompt + f"\nVariation: {i + 1}"\n\n            # Generate Image (Handling Dictionary Config)
-            img = generate_ai_image(iteration_prompt, MODEL_OPTIONS[selected_model])
-            if img:
-                generated_concepts.append((img, current_piping, current_stitching, current_quilt))
-                
-            # Buffer for Gemini Free Tier limits to prevent 429 Too Many Requests errors
-            if selected_model == "Gemini Imagen 3 (Google Precise Free)" and i < num_images - 1:
-                time.sleep(6.5) 
-                
-        st.write("🌐 Fetching Real-World Market References...")
-        market_refs = fetch_market_references(f"{vehicle} {brake_type} {rotor} {caliper}")
-        
-        st.write("📊 Analyzing Material Trends...")
-        analysis = call_openrouter(f"Briefly analyze high-level 2026 trends for {brake_type}, {rotor}, {caliper}, and {material}.")
-        
-        status.update(label="✅ Analysis & Generation Complete", state="complete")
-        
-    # --- MATRIX DISPLAY UI ---
-    st.markdown("---")
-    
-    # Render generated images vertically for FULL native resolution inspection
-    st.subheader("🎨 AI-Generated Design Matrix (High-Resolution Inspection)")
-    if generated_concepts:
-        for idx, (img, piping, stitching, quilt) in enumerate(generated_concepts):
-            st.markdown(f"#### Variant {idx+1} | {piping} Piping | {stitching} Stitching | {quilt} Pattern")
-            
-            # Displaying directly in the main container forces maximum native size
-            st.image(img, use_container_width=True)
-            
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            st.download_button("💾 Save Concept", buf.getvalue(), f"design_2026_v{idx+1}.png", key=f"dl_btn_{idx}")
-            st.divider()
+    st.write(f"🎨 Generating {num_images} AI Brake Design Concept(s)...")
+    progress = st.progress(0)
+    generated_images = []
 
-    # ==========================================
-    # 📊 PATCH: UI MATRIX DISPLAY ENGINE (6 DOMAINS | 3 PINTEREST)
-    # ==========================================
-    col_left, col_right = st.columns([2, 1])
-    with col_left:
-        st.subheader("🌍 Verified Market References & Live Shop Links (6 Domains | 3 Pinterest)")
-        if market_refs:
-            # We explicitly split based on the refined 'src' labels from the pipeline
-            pin_ui_refs = [r for r in market_refs if r["src"] == "Pinterest"]
-            other_ui_refs = [r for r in market_refs if r["src"] != "Pinterest"]
-            
-            # 📌 ROW 1: Dedicated 3-Column Pinterest Trend Matrix
-            if pin_ui_refs:
-                st.markdown("#### 📌 Top Pinterest Design Anchors (Strict Prompt-Based)")
-                cols_pin = st.columns(3)
-                # Take exactly 3 or what's available
-                for idx, ref in enumerate(pin_ui_refs[:3]):
-                    with cols_pin[idx]:
-                        # A container ensures image and button are grouped as one logical unit
-                        with st.container():
-                            st.image(ref["img"], caption=f"Visual Design Trend {idx+1}", use_container_width=True)
-                            # The link button now specifically targets Pinterest
-                            st.link_button("🔗 View on Pinterest", ref["link"], use_container_width=True)
-                # Small visual spacer between rows
-                st.write("") 
-            
-            # 🏢 ROW 2 (and naturally Row 3): 6-Image Factory & OEM Grid
-            if other_ui_refs:
-                st.markdown("#### 🏢 Factory & OEM Live Specifications (2026 Futuristic Designs)")
-                # A 3-column structure for the 6 images automatically creates a 2x3 grid
-                cols_rand = st.columns(3)
-                # Take exactly 6 or what's available
-                for idx, ref in enumerate(other_ui_refs[:6]):
-                    # Cycle through columns using modulo (0, 1, 2)
-                    with cols_rand[idx % 3]:
-                        with st.container():
-                            st.image(ref["img"], caption=f"Market Ref {idx+1} from {ref['src']}", use_container_width=True)
-                            # The button label dynamically reflects the unique source domain
-                            st.link_button(f"🔗 View on {ref['src']}", ref["link"], use_container_width=True)
-                            
-    with col_right:
-        st.subheader("📈 Flashmind Analysis")
-        st.info(analysis)
+    for i in range(num_images):
+        iteration_prompt = brake_prompt + f"\nDesign variation: {i + 1}"
+        img = generate_ai_image(
+            iteration_prompt,
+            MODEL_OPTIONS[selected_model]
+        )
 
-    # Compliance & Legal Expansion
-    with st.expander("📊 2026 Tech & Model Trends & Legal Governance"):
-        st.write("- **AI Concepts:** Generated via Top Models are virtual prototype, customized and crafted by user, for prototype visualization.")
-        st.write("- **Market Refs:** Sourced via SERP to ensure engineering feasibility.")
-        st.markdown("""
-            **Zero Data Retention (ZDR) & Compliance Commitment:**
-            - **Non-Storage:** Prompts and generated designs are processed in volatile memory. 
-            - **Zero Training:** Your proprietary design logic is never used to train Omnicore & Pictator.
-            - **Encryption:** All API calls use TLS 1.3 encryption for end-to-end security.
-            - **Intellectual Property:** All software architecture, customized tool outputs, and generated visual schemas remain exclusive IP.
-            - **Jurisdiction:** All commercial and software liabilities are governed legally under the sole jurisdiction of the Gurugram Court, Haryana.
-            """)
+        if img:
+            generated_images.append(img)
+            st.image(img, caption=f"Brake Design Concept {i + 1}", use_container_width=True)
+
+        progress.progress((i + 1) / num_images)
+
+    st.write("🌐 Fetching Real-World Market References...")
+    market_refs = fetch_market_references(
+        f"{vehicle} {brake_type} {rotor} {caliper}"
+    )
+
+    st.write("📊 Analyzing Brake Design Trends...")
+    analysis = call_openrouter(
+        f"Briefly analyze high-level 2026 trends for {brake_type}, "
+        f"{rotor}, {caliper}, {material}, cooling, thermal management, "
+        f"manufacturing and OEM+ automotive design."
+    )
+
+    if market_refs:
+        st.markdown("### 🌐 Market References")
+        for ref in market_refs:
+            st.write(ref)
+
+    if analysis:
+        st.markdown("### 📊 Design & Market Analysis")
+        st.write(analysis)
+
+    if generated_images:
+        st.success(f"Generated {len(generated_images)} brake design concept(s).")
+    else:
+        st.warning("No AI design image was generated. Check the selected AI model and credentials.")
+
