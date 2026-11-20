@@ -78,9 +78,10 @@ def generate_engineering_fallback_analysis(context_summary):
 - **Specified Parameters:** {context_summary.get('dimensions_note', 'Standard OEM packaging envelope')}
 - **Machining & Tolerance Notes:** Ensure concentricity between center hub bore, pitch circle diameter (PCD), and outer friction/mating faces; maintain fillet radii at hat-to-disc transitions to mitigate thermal stress concentration.
 
-**3. 2026 Industry & Market Alignment**
-- **OEM+ & Aftermarket Direction:** Increasing adoption of precision CNC-machined faces, weight-optimized hat sections, and directional thermal dissipation geometries for improved fade resistance and NVH control.
-- **Validation Recommendation:** Verify wheel spoke/caliper radial clearance, minimum discard thickness, and dynamic balancing prior to CNC toolpath release."""
+**3. Current CNC & Design Recommendations (2026 Trends)**
+- **CNC Cooling & Thermal Control:** Use high-pressure through-spindle coolant (HPC) and directional internal pillar/vane geometry to minimize thermal distortion during machining and peak braking.
+- **CNC Precision Grinding & Finish:** Apply double-disc CBN/ceramic face grinding to achieve sub-10 µm lateral runout (LRO) and <0.8 µm Ra surface finish, reducing DTV and brake judder.
+- **CNC High-Speed Drilling & Slotting:** Use peck-drilling cycles with chamfered hole exits and curved stress-relieving slots to prevent radial micro-cracking while improving wet-bite degassing."""
 
 def call_openrouter(prompt, context_summary=None):
     if OPENROUTER_API_KEY:
@@ -103,7 +104,10 @@ def call_openrouter(prompt, context_summary=None):
                                 "content": (
                                     "You are a senior automotive design and CNC manufacturing engineer. "
                                     "Provide a concise, structured technical and 2026 market trend analysis "
-                                    "covering geometry, thermal management, material/finish, and manufacturability."
+                                    "covering geometry, thermal management, material/finish, and manufacturability. "
+                                    "Include 2-3 specific, practical recommendations on current CNC trends "
+                                    "such as CNC cooling/thermal control, precision CNC grinding/finishing, "
+                                    "and high-speed CNC drilling/slotting."
                                 )
                             },
                             {"role": "user", "content": prompt}
@@ -121,7 +125,7 @@ def call_openrouter(prompt, context_summary=None):
     return generate_engineering_fallback_analysis(context_summary or {})
 
 # --------------------------------------
-# 📐 TECHNICAL DIMENSION SHEET ENGINE (NON-OVERLAPPING)
+# 📐 TECHNICAL DIMENSION OVERLAY ENGINE
 # --------------------------------------
 def extract_dimension_callouts(text_blob):
     """Extracts explicit engineering dimensions (Ø, R, mm, PCD, angles, thickness) from user prompts."""
@@ -131,19 +135,24 @@ def extract_dimension_callouts(text_blob):
     callouts = []
     seen = set()
 
+    patterns = [
+        r"(?:Outer\s+Rotor\s+Radius|Outer\s+Diameter|Center\s+Hub\s+Bore\s+Radius|Hat\s+Outer\s+Radius|Inner\s+Friction\s+Track\s+Radius|Total\s+Axial\s+Height|Wheel\s+Stud\s+Holes|Chamfer|Fillet)[^;\n]*",
+        r"(?:Ø\s*\d+(?:\.\d+)?\s*mm(?:\s*PCD)?|R\s*\d+(?:\.\d+)?\s*mm|\d+(?:\.\d+)?\s*mm\s*(?:disc\s*thickness|top\s*face\s*thickness|thickness|height|radius|diameter|×\s*\d+°))",
+    ]
+
     for line in text_blob.splitlines():
         clean_line = re.sub(r"^[\-\*\d\.\)\s]+", "", line).strip()
         if not clean_line:
             continue
         if re.search(r"(Ø\s*\d+|R\s*\d+|\d+(?:\.\d+)?\s*mm|PCD|\d+\s*°)", clean_line, re.IGNORECASE):
             short_label = clean_line.split(":")[0] + (": " + clean_line.split(":", 1)[1].strip() if ":" in clean_line else "")
-            if len(short_label) > 78:
+            if len(short_label) > 68:
                 matches = re.findall(r"(Ø\s*\d+(?:\.\d+)?\s*mm(?:\s*PCD)?|R\s*\d+(?:\.\d+)?\s*mm|\d+(?:\.\d+)?\s*mm(?:\s*×\s*\d+°)?)", clean_line)
                 if matches:
-                    prefix = clean_line.split(":")[0][:30] if ":" in clean_line else "DIM"
+                    prefix = clean_line.split(":")[0][:26] if ":" in clean_line else "DIM"
                     short_label = f"{prefix}: {' / '.join(dict.fromkeys(matches))}"
                 else:
-                    short_label = short_label[:75] + "..."
+                    short_label = short_label[:65] + "..."
             if short_label.lower() not in seen:
                 seen.add(short_label.lower())
                 callouts.append(short_label)
@@ -153,157 +162,106 @@ def extract_dimension_callouts(text_blob):
         for m in dict.fromkeys(raw_matches):
             callouts.append(f"SPEC: {m}")
 
-    return callouts[:10]
-
-
-def wrap_text_lines(draw, text, font, max_width):
-    """Wraps text cleanly to fit inside the dedicated dimension panel without clipping."""
-    words = text.split()
-    lines = []
-    current = ""
-    for word in words:
-        test = f"{current} {word}".strip()
-        bbox = draw.textbbox((0, 0), test, font=font)
-        if (bbox[2] - bbox[0]) <= max_width or not current:
-            current = test
-        else:
-            lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
-    return lines
+    return callouts[:8]
 
 
 def apply_dimension_annotations(pil_img, prompt_text, part_label="COMPONENT"):
     """
-    Places the generated 2D/3D product inside a clean CAD viewport and renders all
-    dimension callouts and a large specification panel in dedicated side/bottom margins
-    so zero text or boxes ever overlap the product.
+    Draws crisp CAD-style leader lines pointing onto 2D/3D product dimensions while placing
+    the lower-right specification panel in a properly spaced CAD margin so it never overlaps the product.
     """
-    src_img = pil_img.convert("RGB")
-    pw, ph = src_img.size
-
-    # Dedicated outer engineering sheet margins (no overlap with product viewport)
-    pad_left = 28
-    pad_top = 74
-    pad_bottom = 28
-    sidebar_w = max(520, int(pw * 0.56))
-    gap = 24
-
-    canvas_w = pad_left + pw + gap + sidebar_w + pad_left
-    canvas_h = pad_top + ph + pad_bottom
-
-    # Dark blueprint/CAD engineering sheet background
-    sheet = Image.new("RGB", (canvas_w, canvas_h), (13, 19, 29))
-    draw = ImageDraw.Draw(sheet)
-
-    try:
-        font_header = ImageFont.truetype("DejaVuSans-Bold.ttf", 22)
-        font_section = ImageFont.truetype("DejaVuSans-Bold.ttf", 19)
-        font_callout = ImageFont.truetype("DejaVuSans-Bold.ttf", 18)
-        font_spec = ImageFont.truetype("DejaVuSans.ttf", 17)
-    except Exception:
-        font_header = ImageFont.load_default()
-        font_section = ImageFont.load_default()
-        font_callout = ImageFont.load_default()
-        font_spec = ImageFont.load_default()
-
-    cyan = (0, 212, 255)
-    amber = (255, 198, 10)
-    panel_bg = (19, 28, 43)
-    border_subtle = (45, 72, 105)
-    text_white = (245, 248, 255)
-    text_muted = (175, 195, 220)
-
-    # Outer engineering sheet border
-    draw.rectangle([10, 10, canvas_w - 10, canvas_h - 10], outline=cyan, width=2)
-
-    # Top Title Banner
-    header_text = f"ENGINEERING DIMENSION SHEET — {part_label.upper()}  |  UNITS: mm"
-    draw.rectangle([pad_left, 18, canvas_w - pad_left, 58], fill=panel_bg, outline=cyan, width=2)
-    draw.text((pad_left + 16, 26), header_text, fill=amber, font=font_header)
-
-    # Paste untouched 2D/3D product image into dedicated left viewport
-    vp_x0, vp_y0 = pad_left, pad_top
-    vp_x1, vp_y1 = vp_x0 + pw, vp_y0 + ph
-    sheet.paste(src_img, (vp_x0, vp_y0))
-    draw.rectangle([vp_x0 - 2, vp_y0 - 2, vp_x1 + 2, vp_y1 + 2], outline=cyan, width=2)
-
-    # Right-side Dedicated Dimension & Callout Column (100% outside product area)
-    sb_x0 = vp_x1 + gap
-    sb_x1 = canvas_w - pad_left
-    sb_y0 = vp_y0
-    sb_y1 = vp_y1
-
-    draw.rectangle([sb_x0, sb_y0, sb_x1, sb_y1], fill=panel_bg, outline=cyan, width=2)
+    src_rgba = pil_img.convert("RGBA")
+    w, h = src_rgba.size
 
     callouts = extract_dimension_callouts(prompt_text)
-    dia_matches = list(dict.fromkeys(re.findall(r"(Ø\s*\d+(?:\.\d+)?\s*mm)", prompt_text)))
-    rad_matches = list(dict.fromkeys(re.findall(r"(R\s*\d+(?:\.\d+)?\s*mm)", prompt_text)))
-    thick_matches = list(dict.fromkeys(re.findall(r"(\d+(?:\.\d+)?\s*mm\s*(?:disc\s*thickness|top\s*face\s*thickness|thickness|height))", prompt_text, re.IGNORECASE)))
 
-    cur_y = sb_y0 + 16
-    draw.text((sb_x0 + 18, cur_y), "KEY GEOMETRIC CALLOUTS (2D / 3D)", fill=amber, font=font_section)
-    cur_y += 32
-    draw.line([(sb_x0 + 14, cur_y), (sb_x1 - 14, cur_y)], fill=border_subtle, width=2)
-    cur_y += 14
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", max(15, w // 60))
+        font_dim = ImageFont.truetype("DejaVuSans-Bold.ttf", max(14, w // 68))
+        font_small = ImageFont.truetype("DejaVuSans.ttf", max(13, w // 76))
+    except Exception:
+        font_title = ImageFont.load_default()
+        font_dim = ImageFont.load_default()
+        font_small = ImageFont.load_default()
 
-    # Build primary callout badges with clean leader lines pointing to the viewport border (never over product)
-    key_badges = []
+    # Dedicated lower CAD footer strip height so lower-right spec table never overlaps product photo
+    line_h = max(21, h // 36)
+    footer_h = (52 + len(callouts) * line_h) if callouts else 0
+    total_h = h + footer_h
+
+    canvas = Image.new("RGBA", (w, total_h), (12, 18, 28, 255))
+    canvas.paste(src_rgba, (0, 0))
+
+    overlay = Image.new("RGBA", (w, total_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Extract key Ø / R values if present for direct radial/diameter leader lines
+    dia_matches = re.findall(r"(Ø\s*\d+(?:\.\d+)?\s*mm)", prompt_text)
+    rad_matches = re.findall(r"(R\s*\d+(?:\.\d+)?\s*mm)", prompt_text)
+    thick_matches = re.findall(r"(\d+(?:\.\d+)?\s*mm\s*(?:disc\s*thickness|thickness|height))", prompt_text, re.IGNORECASE)
+
+    line_color = (0, 210, 255, 235)      # Technical Cyan
+    accent_color = (255, 195, 0, 240)    # Engineering Amber
+    box_bg = (12, 18, 28, 225)           # Dark CAD HUD panel
+    box_border = (0, 210, 255, 225)
+    text_white = (245, 248, 255, 255)
+
+    cx, cy = int(w * 0.50), int(h * 0.50)
+
+    # 1. Subtle CAD Crosshair Centerlines
+    dash_len = 14
+    for x in range(int(w * 0.18), int(w * 0.82), dash_len * 2):
+        draw.line([(x, cy), (min(x + dash_len, int(w * 0.82)), cy)], fill=(0, 210, 255, 110), width=1)
+    for y in range(int(h * 0.14), int(h * 0.86), dash_len * 2):
+        draw.line([(cx, y), (cx, min(y + dash_len, int(h * 0.86)))], fill=(0, 210, 255, 110), width=1)
+
+    # 2. Top-Left Engineering Header Tag
+    header_text = f"CAD / DIMENSIONAL VIEW — {part_label.upper()} (UNITS: mm)"
+    hb = draw.textbbox((0, 0), header_text, font=font_title)
+    draw.rectangle([16, 14, 32 + (hb[2] - hb[0]), 26 + (hb[3] - hb[1])], fill=box_bg, outline=box_border, width=2)
+    draw.text((24, 20), header_text, fill=accent_color, font=font_title)
+
+    # 3. Direct Leader-Line Callouts pointing onto the 2D/3D part geometry (placed cleanly in outer corners)
+    anchor_specs = []
     if dia_matches:
-        key_badges.append((f"OUTER DIAMETER: {dia_matches[0]}", int(vp_y0 + ph * 0.22)))
+        anchor_specs.append((f"OUTER: {dia_matches[0]}", (int(w * 0.68), int(h * 0.24)), (int(w * 0.77), int(h * 0.10))))
     if len(dia_matches) > 1:
-        key_badges.append((f"HAT / PCD: {dia_matches[1]}", int(vp_y0 + ph * 0.36)))
+        anchor_specs.append((f"HAT / PCD: {dia_matches[1]}", (int(w * 0.58), int(h * 0.36)), (int(w * 0.77), int(h * 0.22))))
     if len(dia_matches) > 2:
-        key_badges.append((f"HUB BORE: {dia_matches[-1]}", int(vp_y0 + ph * 0.50)))
+        anchor_specs.append((f"BORE: {dia_matches[-1]}", (int(w * 0.50), int(h * 0.48)), (int(w * 0.77), int(h * 0.34))))
     if rad_matches:
-        key_badges.append((f"FILLET / RADIUS: {rad_matches[0]}", int(vp_y0 + ph * 0.64)))
+        anchor_specs.append((f"FILLET / RAD: {rad_matches[0]}", (int(w * 0.42), int(h * 0.38)), (int(w * 0.03), int(h * 0.20))))
     if thick_matches:
-        key_badges.append((f"THICKNESS / HEIGHT: {thick_matches[0].upper()}", int(vp_y0 + ph * 0.78)))
+        anchor_specs.append((f"SECTION: {thick_matches[0].upper()}", (int(w * 0.31), int(h * 0.56)), (int(w * 0.03), int(h * 0.32))))
 
-    if not key_badges:
-        key_badges.append(("STANDARD OEM DIMENSIONAL ENVELOPE", int(vp_y0 + ph * 0.30)))
+    for label, pt_target, pt_label in anchor_specs:
+        tx, ty = pt_target
+        lx, ly = pt_label
+        elbow_x = lx + 140 if lx < cx else lx - 15
+        draw.ellipse([tx - 4, ty - 4, tx + 4, ty + 4], fill=accent_color, outline=(0, 0, 0, 255))
+        draw.line([(tx, ty), (elbow_x, ly + 12), (lx, ly + 12)], fill=line_color, width=2)
+        tb = draw.textbbox((0, 0), label, font=font_dim)
+        tw, th = tb[2] - tb[0], tb[3] - tb[1]
+        draw.rectangle([lx - 6, ly - 4, lx + tw + 10, ly + th + 8], fill=box_bg, outline=line_color, width=2)
+        draw.text((lx + 2, ly + 1), label, fill=text_white, font=font_dim)
 
-    for badge_text, anchor_y in key_badges:
-        box_h = 40
-        box_y0 = cur_y
-        box_y1 = box_y0 + box_h
-        mid_y = (box_y0 + box_y1) // 2
+    # 4. Lower-Right Dimension Specification Table in dedicated spaced footer (zero overlap with photo)
+    if callouts:
+        # Clean divider line separating the product photo from the lower CAD dimension area
+        draw.line([(0, h), (w, h)], fill=box_border, width=2)
 
-        # Leader line from right panel to viewport edge only (does not cross product)
-        draw.ellipse([vp_x1 - 3, anchor_y - 5, vp_x1 + 7, anchor_y + 5], fill=amber)
-        draw.line([(vp_x1 + 2, anchor_y), (sb_x0 - 8, mid_y), (sb_x0 + 14, mid_y)], fill=cyan, width=2)
+        panel_w = min(int(w * 0.64), 660)
+        panel_h = footer_h - 24
+        x0 = w - panel_w - 20
+        y0 = h + 12
+        draw.rectangle([x0, y0, x0 + panel_w, y0 + panel_h], fill=box_bg, outline=box_border, width=2)
+        draw.text((x0 + 14, y0 + 8), "SPECIFIED DIMENSIONS & TOLERANCE NOTES (mm)", fill=accent_color, font=font_dim)
+        draw.line([(x0 + 10, y0 + 30), (x0 + panel_w - 10, y0 + 30)], fill=box_border, width=1)
+        for idx, item in enumerate(callouts):
+            draw.text((x0 + 14, y0 + 36 + idx * line_h), f"• {item}", fill=text_white, font=font_small)
 
-        draw.rectangle([sb_x0 + 14, box_y0, sb_x1 - 14, box_y1], fill=(12, 18, 28), outline=cyan, width=2)
-        draw.text((sb_x0 + 26, box_y0 + 9), badge_text, fill=text_white, font=font_callout)
-        cur_y = box_y1 + 12
-
-    # Large Full Dimensional Specification Table in lower right panel (zero overlap)
-    cur_y += 10
-    draw.rectangle([sb_x0 + 14, cur_y, sb_x1 - 14, sb_y1 - 16], fill=(12, 18, 28), outline=amber, width=2)
-    cur_y += 14
-    draw.text((sb_x0 + 26, cur_y), "SPECIFIED DIMENSIONS & CNC NOTES", fill=amber, font=font_section)
-    cur_y += 30
-    draw.line([(sb_x0 + 24, cur_y), (sb_x1 - 24, cur_y)], fill=border_subtle, width=2)
-    cur_y += 14
-
-    max_text_w = (sb_x1 - 28) - (sb_x0 + 30)
-    display_items = callouts if callouts else [
-        "All linear dimensions in millimeters (mm)",
-        "General machining tolerance: ±0.2 mm",
-        "Deburr all sharp edges; dynamically balance rotor"
-    ]
-
-    for item in display_items:
-        wrapped = wrap_text_lines(draw, f"• {item}", font_spec, max_text_w)
-        for line in wrapped:
-            if cur_y + 24 > sb_y1 - 24:
-                break
-            draw.text((sb_x0 + 26, cur_y), line, fill=text_white, font=font_spec)
-            cur_y += 25
-        cur_y += 6
-
-    return sheet
+    combined = Image.alpha_composite(canvas, overlay).convert("RGB")
+    return combined
 
 # --------------------------------------
 # 🛠️ IMAGE & MARKET ENGINES
@@ -668,8 +626,8 @@ if st.button("🚀 EXECUTE DESIGN SUITE"):
         combined_dim_source = f"{design_prompt}\n{custom_instruction}"
         dim_callouts_list = extract_dimension_callouts(combined_dim_source)
         dim_prompt_clause = (
-            "Render clean, uncluttered 2D/3D engineering geometry without garbled text labels on the part surface; "
-            "reflect exact proportions matching: " + "; ".join(dim_callouts_list)
+            "Include clear engineering CAD dimension lines, diameter callouts, and technical annotation styling matching: "
+            + "; ".join(dim_callouts_list)
             if dim_callouts_list else ""
         )
 
@@ -713,7 +671,7 @@ VISUAL QUALITY:
 Show realistic automotive manufacturing details, credible geometry, mounting
 relationships, wheel clearance where relevant, ventilation/cooling features where
 applicable, machined/cast surfaces, and professional product visualization.
-Center the component cleanly in frame with clean background margins and no random text overlaid on the metal part.
+Center the component cleanly in frame with clear margins for dimensional callouts.
 This is a concept visualization and not a certified safety-critical engineering drawing.
 """
         market_query = f"{vehicle} {brake_type} {rotor} {caliper}"
@@ -721,7 +679,8 @@ This is a concept visualization and not a certified safety-critical engineering 
             f"Analyze the engineering design and 2026 market trends for {vehicle} ({axle} {brake_type}, "
             f"{rotor}, {caliper}, {material}, {finish}, focus: {component_focus}). "
             f"Incorporate these user design & dimensional specifications: {design_prompt} {custom_instruction}. "
-            f"Cover geometry, thermal management, CNC manufacturability, and OEM+ design."
+            f"Cover geometry, thermal management, CNC manufacturability, OEM+ design, and provide 2-3 bullet-point "
+            f"recommendations on current CNC machining trends (such as CNC cooling, grinding, or drilling)."
         )
         analysis_context = {
             "summary_title": f"{vehicle} — {axle} {brake_type} ({rotor}, {component_focus})",
@@ -789,8 +748,8 @@ component instead of substituting a brake component.
 VISUAL QUALITY:
 Use credible cast or machined surfaces, ribs, bosses, cavities, mounting points,
 interfaces, draft/machining logic, realistic proportions, and professional
-industrial product visualization. Avoid invented branding, garbled text, and impossible geometry.
-Center the component cleanly in frame with clean margins.
+industrial product visualization. Avoid invented branding and impossible geometry.
+Center the component cleanly in frame with clear margins for dimensional callouts.
 This is a concept visualization and not a certified engineering drawing.
 """
         market_query = f"{selected_component} {selected_part_category} automotive component manufacturing"
@@ -798,7 +757,8 @@ This is a concept visualization and not a certified engineering drawing.
             f"Analyze the engineering design and 2026 manufacturing trends for {selected_component} "
             f"({selected_part_category}, {non_brake_material}, {non_brake_finish}). "
             f"Incorporate these specifications: {non_brake_prompt} {non_brake_engineering}. "
-            f"Focus on material, casting/machining, thermal management, and OEM/industrial design."
+            f"Focus on material, casting/machining, thermal management, OEM/industrial design, and provide "
+            f"2-3 bullet-point recommendations on current CNC machining trends (such as CNC cooling, grinding, or drilling)."
         )
         analysis_context = {
             "summary_title": f"{selected_component} ({selected_part_category})",
