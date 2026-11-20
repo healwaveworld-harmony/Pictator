@@ -59,6 +59,7 @@ if not st.session_state.authenticated:
 # ⚡ FLASHMIND ENGINE (OPENROUTER)
 # --------------------------------------
 ANALYSIS_MODELS = [
+    "google/gemma-4-26b-a4b-it:free",
     "liquid/lfm-3-1.7b:free",
     "Llama 3.3 70B Instruct (free)",
     "gpt-oss-20b",
